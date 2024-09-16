@@ -24,4 +24,11 @@ app.use(
 // to store the temporary data in the server
 app.use(express.static("public"));
 app.use(cookieParser());
+
+// routes import
+import userRouter from "./routes/user.route.js";
+
+// route declarations
+app.use("/api/v1/users", userRouter);
+
 export { app };
