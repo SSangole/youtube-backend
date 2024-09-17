@@ -1,7 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
-import { uploadOnCloudinary } from "../utils/fileUpload.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/fileUpload.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import config from "../config/config.js";
@@ -55,8 +58,8 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     email,
     username,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || "",
+    avatar: { url: avatar.url, publicId: avatar.public_id },
+    coverImage: { url: coverImage?.url || "", publicId: coverImage?.public_id },
   });
 
   // check if user created successfully and filter out password and refreshtoken to send the data
@@ -193,4 +196,122 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword)
+    throw new ApiError(400, "Current password and new password are required");
+
+  const { _id } = req.user;
+  const user = await User.findById(_id);
+  const isPassCorrect = await user.isPasswordCorrect(currentPassword);
+
+  if (!isPassCorrect) throw new ApiError(400, "Current password is incorrect");
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+  return res
+    .status(200)
+    .send(new ApiResponse(200, "Password changed successfully", {}));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res.status(200).send(new ApiResponse(200, "User found", req.user));
+});
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+
+  if (!fullName || !email) {
+    throw new ApiError(400, "Full name and email are required");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        fullName,
+        email,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .send(new ApiResponse(200, "Account details updated successfully", user));
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const { _id, avatar: prevAvatar } = req.user;
+  const avatarLocalPath = req.file.path;
+  if (!avatarLocalPath) throw new ApiError(400, "Avatar file is missing");
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar?.url) throw new ApiError(400, "Error while uploading avatar");
+  const user = await User.findByIdAndUpdate(
+    _id,
+    {
+      $set: {
+        avatar: { url: avatar?.url, publicId: avatar?.public_id },
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password -refreshToken");
+
+  if (user) {
+    await deleteFromCloudinary(prevAvatar.publicId); // delete the old cover image from cloudinary
+  }
+
+  return res
+    .status(200)
+    .send(new ApiResponse(200, "Avatar updated successfully", user));
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const { _id, coverImage: prevCoverImage } = req.user;
+  const coverImageLocalPath = req.file.path;
+  if (!coverImageLocalPath)
+    throw new ApiError(400, "Cover image file is missing");
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage?.url)
+    throw new ApiError(400, "Error while uploading cover image");
+  const user = await User.findByIdAndUpdate(
+    _id,
+    {
+      $set: {
+        coverImage: { url: coverImage?.url, publicId: coverImage?.public_id },
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password -refreshToken");
+
+  if (user) {
+    await deleteFromCloudinary(prevCoverImage.publicId); // delete the old cover image from cloudinary
+  }
+
+  return res
+    .status(200)
+    .send(new ApiResponse(200, "Cover image updated successfully", user));
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
+};

@@ -33,13 +33,20 @@ const userSchema = new mongoose.Schema(
       index: true, // Index for faster search query
     },
     avatar: {
-      type: String, // cloudinary url
-      required: true,
-      default: "https://www.gravatar.com/avatar",
+      url: {
+        type: String, // cloudinary url
+        required: true,
+        default: "https://www.gravatar.com/avatar",
+      },
+      publicId: {
+        type: String,
+        required: true,
+        default: "default_avatar",
+      },
     },
     coverImage: {
-      type: String, // cloudinary url
-      // default: "https://www.gravatar.com/avatar",
+      url: String, // cloudinary url
+      publicId: String,
     },
     watchHistory: [
       {
