@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs"; // Node.js File system for reading files
-import config from '../config/config.js'; // Import your config file
+import config from "../config/config.js"; // Import your config file
 
 // Configuration
 cloudinary.config({
@@ -17,7 +17,6 @@ const uploadOnCloudinary = async (localFilePath) => {
       //   folder: "folder_name",
       resource_type: "auto",
     });
-    console.log("uploadOnCloudinary ~ response->", response);
     fs.unlinkSync(localFilePath); // remove the locally saved temporary file
     return response;
   } catch (error) {
