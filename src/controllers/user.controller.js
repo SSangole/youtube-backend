@@ -10,7 +10,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // check if all fields are provided
   if (
-    [username, password, email, fullName].some((item) => item.trim() === "")
+    [username, password, email, fullName].some((item) => item?.trim() === "")
   ) {
     return res.status(400).json({ message: "All fields are required" });
   }
@@ -25,16 +25,13 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  console.log("registerUser ~ avatarLocalPath->", avatarLocalPath);
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
-  console.log("registerUser ~ coverImageLocalPath->", coverImageLocalPath);
+  const coverImageLocalPath =
+    req.files?.coverImage?.length > 0 && req.files?.coverImage[0]?.path;
 
   if (!avatarLocalPath) throw new ApiError(400, "Avatar is required");
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-  console.log("registerUser ~ avatar->", avatar);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-  console.log("registerUser ~ coverImage->", coverImage);
 
   // create user with given data
   const user = await User.create({
@@ -43,7 +40,7 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     username,
     avatar: avatar.url,
-    coverImage: coverImage.url,
+    coverImage: coverImage?.url || "",
   });
 
   // check if user created successfully and filter out password and refreshtoken to send the data

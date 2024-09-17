@@ -1,19 +1,16 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs"; // Node.js File system for reading files
+import config from '../config/config.js'; // Import your config file
 
 // Configuration
 cloudinary.config({
-  cloud_name: "dhetjxkwj",
-  api_key: "521327538282514",
-  api_secret: "h5WF8pD-LcXBDRpgPmGVPeCrzFE",
-  // cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  // api_key: process.env.CLOUDINARY_API_KEY,
-  // api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: config.CLOUDINARY_CLOUD_NAME,
+  api_key: config.CLOUDINARY_API_KEY,
+  api_secret: config.CLOUDINARY_API_SECRET,
 });
 
 const uploadOnCloudinary = async (localFilePath) => {
   try {
-    console.log("uploadOnCloudinary ~ localFilePath in cl->", localFilePath);
     if (!localFilePath) return null;
     // Upload file to Cloudinary
     const response = await cloudinary.uploader.upload(localFilePath, {
@@ -21,6 +18,7 @@ const uploadOnCloudinary = async (localFilePath) => {
       resource_type: "auto",
     });
     console.log("uploadOnCloudinary ~ response->", response);
+    fs.unlinkSync(localFilePath); // remove the locally saved temporary file
     return response;
   } catch (error) {
     console.error(error);
