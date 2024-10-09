@@ -4,6 +4,7 @@ import { Video } from "../models/video.model.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/fileUpload.js";
 import mongoose from "mongoose";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { filesValidation, updateVideoDetailsValidation, videoDetailsValidation } from "../helpers/schema-validations/user.schemavalidation.js";
 
 // Get video by id
 const getVideoById = asyncHandler(async (req, res) => {
@@ -60,16 +61,15 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 // Upload video
 const uploadVideo = asyncHandler(async (req, res) => {
-    const { title, description, owner, isPublished } = req.body;
-    if (!title || !owner) {
-        throw new ApiError(400, "Title and owner are required");
-    }
+    // validate request body fields
+    const result = await videoDetailsValidation.validateAsync(req.body);
+    const { title, description, owner, isPublished } = result;
 
-    if (!req.files || !req.files['videoFile'] || !req.files['thumbnail']) {
-        throw new ApiError(400, "Video and thumbnail are required");
-    }
-    const localVideoPath = req.files['videoFile'][0].path;
-    const localThumbnailPath = req.files['thumbnail'][0].path;
+    // validate request files
+    const files = await filesValidation.validateAsync(req.files);
+
+    const localVideoPath = files['videoFile'][0].path;
+    const localThumbnailPath = files['thumbnail'][0].path;
 
     const videoResponse = await uploadOnCloudinary(localVideoPath);
     const thumbnailResponse = await uploadOnCloudinary(localThumbnailPath);
@@ -122,14 +122,9 @@ const togglePublishStatusOfVideo = asyncHandler(async(req, res) => {
 
 // Update video details
 const updateVideoDetails = asyncHandler(async(req, res) => {
-    const { id, title, description } = req.body;
-    const thumbnail = req.file;
-    if (!id) {
-        throw new ApiError(400, "Invalid video id");
-    }
-    if (!title && !description && !thumbnail) {
-        throw new ApiError(400, "At least one field is required to update");
-    }
+    // validate request body fields
+    const result = await updateVideoDetailsValidation.validateAsync({...req.body, thumbnail: req.file});
+    const { id, title, description, thumbnail } = result;
 
     const updateBody = {};
 

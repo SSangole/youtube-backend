@@ -9,6 +9,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import config from "../config/config.js";
 import mongoose from "mongoose";
+import {userCreationValidation, userLoginValidation, changePasswordValidation, updateAccountDetailsValidation} from "../helpers/schema-validations/user.schemavalidation.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -25,15 +26,9 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  // take the user data from the request body
-  const { username, password, email, fullName } = req.body;
-
-  // check if all fields are provided
-  if (
-    [username, password, email, fullName].some((item) => item?.trim() === "")
-  ) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
+  // validate the user data from the request body
+  const result = await userCreationValidation.validateAsync(req.body);
+  const { username, password, email, fullName } = result;
 
   // check if user with email or username already exists
   const existingUser = await User.findOne({
@@ -77,11 +72,9 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  // take the user data from the request body
-  const { username, email, password } = req.body;
-
-  if (!username && !email)
-    throw new ApiError(400, "Username or email is required");
+  // validate the user data from the request body
+  const result = await userLoginValidation.validateAsync(req.body);
+  const { username, email, password } = result;
 
   // check if usre with email exists
   const existingUser = await User.findOne({
@@ -198,10 +191,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 });
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword)
-    throw new ApiError(400, "Current password and new password are required");
+  // validate the user data from the request body
+  const result = await changePasswordValidation.validateAsync(req.body);
+  const { currentPassword, newPassword } = result;
 
   const { _id } = req.user;
   const user = await User.findById(_id);
@@ -221,11 +213,9 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { fullName, email } = req.body;
-
-  if (!fullName || !email) {
-    throw new ApiError(400, "Full name and email are required");
-  }
+  // validate the user data from the request body
+  const result = await updateAccountDetailsValidation.validateAsync(req.body);
+  const { fullName, email } = result;
 
   const user = await User.findByIdAndUpdate(
     req.user._id,
@@ -247,6 +237,13 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const { _id, avatar: prevAvatar } = req.user;
+
+  // check if the file is an image
+  const mimeTypes = ["image/png", "image/jpg", "image/jpeg"];
+  if (!mimeTypes.includes(req?.file?.mimetype)){
+    throw new ApiError(400, "Invalid file type");
+  }
+
   const avatarLocalPath = req.file.path;
   if (!avatarLocalPath) throw new ApiError(400, "Avatar file is missing");
 
@@ -276,6 +273,13 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const { _id, coverImage: prevCoverImage } = req.user;
+
+    // check if the file is an image
+    const mimeTypes = ["image/png", "image/jpg", "image/jpeg"];
+    if (!mimeTypes.includes(req?.file?.mimetype)){
+      throw new ApiError(400, "Invalid file type");
+    }
+
   const coverImageLocalPath = req.file.path;
   if (!coverImageLocalPath)
     throw new ApiError(400, "Cover image file is missing");
