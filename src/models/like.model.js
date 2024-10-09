@@ -17,6 +17,10 @@ const likeSchema = mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: "Tweet",
         },
+    isLiked: {
+        type: Boolean,
+        default: true,
+    },
 }, { timestamps: true});
 
 export const Like = mongoose.model("Like", likeSchema);

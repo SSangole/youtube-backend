@@ -10,14 +10,16 @@ const commentSchema = mongoose.Schema({
         type: String,
         require: true
     },
-    video: {
+    videoId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Video",
         },
-    reply: {
+    replies: [
+        {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Comment",
-        },
+        }
+    ],
 }, { timestamps: true});
 
 commentSchema.plugin(mongooseAggregatePaginate); // gives ability to paginate
